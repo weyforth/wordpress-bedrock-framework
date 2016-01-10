@@ -1,0 +1,46 @@
+
+data:
+  image: busybox
+  command: sh -c 'mkdir -p /data/web'
+  volumes:
+  - .:/data
+
+storage:
+  image: busybox
+  volumes:
+  - /data/web/app/uploads
+  command: sh -c 'mkdir -p /data/web/app/uploads; chown -R 33:33 /data/web/app/uploads'
+
+db:
+  image: mysql:5.7.10
+  environment:
+    MYSQL_ROOT_PASSWORD: &db_p supersecretpassword
+    MYSQL_DATABASE: &db wordpress
+    MYSQL_USER: &db_u wordpress
+    MYSQL_PASSWORD: *db_p
+
+fpm:
+  image: weyforth/php-wordpress:1.0.0
+  environment: &env
+    WP_ENV: development-docker
+    DB_HOST: db
+    DB_NAME: *db
+    DB_USER: *db_u
+    DB_PASSWORD: *db_p
+  volumes_from:
+  - storage
+  - data
+  links:
+  - db
+
+web:
+  image: weyforth/nginx-php:1.0.0
+  ports:
+  - '80:80'
+  environment:
+    WEB_ROOT: /data/web
+  links:
+  - fpm
+  volumes_from:
+  - data
+  - storage

@@ -1,0 +1,66 @@
+
+data:
+  image: weyforth/bedrock_data:latest
+  labels:
+    io.rancher.container.start_once: 'true'
+
+storage:
+  image: busybox
+  volumes:
+  - /data/web/app/uploads
+  command: sh -c 'mkdir -p /data/web/app/uploads; chown -R 33:33 /data/web/app/uploads'
+  labels:
+    io.rancher.container.start_once: 'true'
+
+db:
+  image: mysql:5.7.10
+  environment:
+    MYSQL_ROOT_PASSWORD: &db_p supersecretpassword
+    MYSQL_DATABASE: &db wordpress
+    MYSQL_USER: &db_u wordpress
+    MYSQL_PASSWORD: *db_p
+  restart: always
+
+fpm:
+  image: weyforth/php-wordpress:1.0.0
+  environment: &env
+    WP_ENV: production-docker
+    DB_HOST: db
+    DB_NAME: *db
+    DB_USER: *db_u
+    DB_PASSWORD: *db_p
+    WP_TITLE: My Blog!
+    WP_ADMIN_USER: admin
+    WP_ADMIN_PASSWORD: changeme
+    WP_ADMIN_EMAIL: admin@dummy.com
+  volumes_from:
+  - storage
+  - data
+  restart: always
+
+web:
+  image: weyforth/nginx-php:1.0.0
+  ports:
+  - '80:80'
+  environment:
+    WEB_ROOT: /data/web
+  labels:
+    io.rancher.sidekicks: storage,data,fpm,db,wp-setup
+  volumes_from:
+  - data
+  - storage
+  restart: always
+
+wp-setup:
+  image: nickbreen/wp-cli
+  environment: *env
+  volumes_from:
+  - data
+  labels:
+    io.rancher.container.start_once: 'true'
+  working_dir: /data
+  entrypoint: bash
+  command: |-
+    -e -x -c '
+    while ! wp --allow-root core install --url="http://dummy" --title="$$WP_TITLE" --admin_user="$$WP_ADMIN_USER" --admin_password="$$WP_ADMIN_PASSWORD" --admin_email="$$WP_ADMIN_EMAIL"; do sleep 5; done
+    '

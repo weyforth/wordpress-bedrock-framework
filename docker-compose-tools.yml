@@ -1,0 +1,36 @@
+
+composer:
+  image: composer/composer:1.0.0-alpha11
+  environment:
+    COMPOSER_HOME: /tmp/.composer
+  volumes:
+  - '.:/app'
+  - ~/.composer:/tmp/.composer
+
+db:
+  extends:
+    file: docker-compose.yml
+    service: db
+
+wp-setup:
+  image: nickbreen/wp-cli
+  environment:
+    WP_ENV: development-docker
+    DB_HOST: db
+    DB_NAME: wordpress
+    DB_USER: wordpress
+    DB_PASSWORD: supersecretpassword
+    WP_TITLE: My Blog
+    WP_ADMIN_USER: admin
+    WP_ADMIN_PASSWORD: changeme
+    WP_ADMIN_EMAIL: admin@dummy.com
+  volumes:
+  - .:/data
+  working_dir: /data
+  entrypoint: bash
+  links:
+   - db
+  command: |-
+    -e -x -c '
+    while ! wp --allow-root core install --url="http://dummy" --title="$WP_TITLE" --admin_user="$WP_ADMIN_USER" --admin_password="$WP_ADMIN_PASSWORD" --admin_email="$WP_ADMIN_EMAIL"; do sleep 5; done
+    '

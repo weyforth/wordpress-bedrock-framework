@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -e
+
+args=""
+prefer_supported=( install, update, require, create-project )
+
+pref_supported=1
+pref_dist=1
+
+set +e
+
+# prefer source unless we explicity ask for dist
+
+if [ "$1" != "" ]; then
+  echo "$@" | grep --quiet "prefer-dist"
+  pref_dist=$?
+fi
+
+if [ "$1" != "" ]; then
+  echo "${prefer_supported[@]:0}" | grep --quiet $1
+  pref_supported=$?
+fi
+
+set -e
+
+if [ $pref_dist -ne 0 ] && [ $pref_supported -eq 0 ]; then
+  args="--prefer-source"
+fi
+
+COMPOSE_FILE=docker-compose-tools.yml docker-compose run --rm composer "$1" $args "${@:2}"

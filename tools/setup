@@ -1,0 +1,4 @@
+#!/bin/bash
+
+COMPOSE_FILE=docker-compose-tools.yml docker-compose run --rm wp-setup
+
